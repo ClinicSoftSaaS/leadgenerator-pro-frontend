@@ -54,7 +54,7 @@ export default function LeadGenerator() {
     );
   };
 
-  // ================= FIXED LEAD EXTRACTION =================
+  // ================= EXTRACT LEAD =================
   const extractLead = () => {
     const lines = rawText
       .split("\n")
@@ -63,8 +63,7 @@ export default function LeadGenerator() {
 
     if (lines.length === 0) return;
 
-    let name = lines[0] || "";
-
+    const name = lines[0] || "";
     let phone = "";
 
     const phoneRegex =
@@ -90,16 +89,11 @@ export default function LeadGenerator() {
       .join(" ")
       .slice(0, 200);
 
-    setLead({
-      name,
-      phone,
-      address,
-    });
-
+    setLead({ name, phone, address });
     setRawText("");
   };
 
-  // ================= SAVE LEAD =================
+  // ================= SAVE LEAD (FIXED) =================
   const saveLead = async () => {
     if (!lead) return;
 
@@ -113,12 +107,17 @@ export default function LeadGenerator() {
         body: JSON.stringify(lead),
       });
 
-      if (!res.ok) throw new Error("Failed to save lead");
+      const response = await res.json();
 
-      const savedLead = await res.json();
+      if (!res.ok) {
+        alert(response.detail || "Failed to save lead");
+        return;
+      }
 
-      // ✅ Optimized: no second API call
-      setLeads((prev) => [savedLead, ...prev]);
+      // ✅ FIX: correct backend structure
+      const newLead = response.lead || response;
+
+      setLeads((prev) => [newLead, ...prev]);
 
       setLead(null);
       setRawText("");
@@ -134,7 +133,6 @@ export default function LeadGenerator() {
   const whatsapp = (phone) => {
     let num = phone?.replace(/\D/g, "") || "";
 
-    // Pakistan default fix (important for your use case)
     if (num && !num.startsWith("92")) {
       num = "92" + num;
     }
@@ -173,10 +171,10 @@ export default function LeadGenerator() {
     autoTable(doc, {
       startY: 25,
       head: [["Name", "Phone", "Address"]],
-      body: leads.map((lead) => [
-        lead.name || "",
-        lead.phone || "",
-        lead.address || "",
+      body: leads.map((l) => [
+        l.name || "",
+        l.phone || "",
+        l.address || "",
       ]),
     });
 
@@ -232,9 +230,7 @@ export default function LeadGenerator() {
 
         {lead && (
           <div style={styles.preview}>
-            <p>
-              <b>{lead.name}</b>
-            </p>
+            <p><b>{lead.name}</b></p>
             <p>{lead.phone}</p>
           </div>
         )}
@@ -279,31 +275,26 @@ const styles = {
     fontFamily: "Arial",
     background: "#f5f7ff",
   },
-
   header: {
     display: "flex",
     justifyContent: "space-between",
     marginBottom: 10,
   },
-
   card: {
     background: "#fff",
     padding: 15,
     marginBottom: 10,
     borderRadius: 10,
   },
-
   input: {
     width: "100%",
     padding: 10,
     marginBottom: 5,
   },
-
   textarea: {
     width: "100%",
     height: 120,
   },
-
   btn: {
     background: "#4f46e5",
     color: "#fff",
@@ -312,7 +303,6 @@ const styles = {
     marginRight: 5,
     cursor: "pointer",
   },
-
   btnGreen: {
     background: "green",
     color: "#fff",
@@ -321,16 +311,13 @@ const styles = {
     marginRight: 5,
     cursor: "pointer",
   },
-
   lead: {
     borderBottom: "1px solid #ddd",
     padding: 10,
   },
-
   preview: {
     marginTop: 10,
   },
-
   logout: {
     background: "black",
     color: "#fff",
