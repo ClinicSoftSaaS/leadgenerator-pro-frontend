@@ -1,0 +1,350 @@
+import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
+
+export default function App() {
+  const [city, setCity] = useState("");
+  const [speciality, setSpeciality] = useState("");
+
+  const [rawText, setRawText] = useState("");
+  const [lead, setLead] = useState(null);
+  const [leads, setLeads] = useState([]);
+
+  const API = "http://127.0.0.1:8000";
+
+  // ================= LOAD LEADS =================
+  useEffect(() => {
+    fetch(`${API}/leads`)
+      .then((res) => res.json())
+      .then((data) => setLeads(data))
+      .catch((err) => console.log(err));
+  }, []);
+
+  // ================= GOOGLE MAPS =================
+  const openGoogleMaps = () => {
+    const q = `${speciality} in ${city}`;
+    window.open(
+      `https://www.google.com/maps/search/${encodeURIComponent(q)}`,
+      "_blank"
+    );
+  };
+
+  // ================= EXTRACT LEAD =================
+  const extractLead = () => {
+    const lines = rawText.split("\n");
+
+    let name = lines[0] || "";
+    let phone = "";
+    let address = "";
+
+    lines.forEach((l) => {
+      if (l.includes("+92") || l.includes("03")) {
+        phone = l.trim();
+      }
+    });
+
+    address =
+      lines.find(
+        (l) =>
+          l.includes("Pakistan") ||
+          l.includes("Road") ||
+          l.includes("Street") ||
+          l.includes("City")
+      ) || "";
+
+    setLead({ name, phone, address });
+  };
+
+  // ================= SAVE LEAD =================
+  const saveLead = async () => {
+    if (!lead) return;
+
+    const res = await fetch(`${API}/leads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead),
+    });
+
+    const data = await res.json();
+
+    setLeads((prev) => [...prev, data.lead]);
+    setLead(null);
+    setRawText("");
+  };
+
+  // ================= WHATSAPP =================
+  const whatsapp = (phone) =>
+    `https://wa.me/${phone.replace(/\D/g, "")}`;
+
+  // ================= EXPORT CSV =================
+  const exportCSV = () => {
+    if (leads.length === 0) return alert("No leads found");
+
+    const header = ["Name", "Phone", "Address"];
+
+    const rows = leads.map((l) => [l.name, l.phone, l.address]);
+
+    const csv = [
+      header.join(","),
+      ...rows.map((r) => r.map((v) => `"${v}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "leads.csv";
+    a.click();
+  };
+
+  // ================= EXPORT PDF =================
+  const exportPDF = () => {
+    if (leads.length === 0) return alert("No leads found");
+
+    const doc = new jsPDF();
+    let y = 10;
+
+    doc.setFontSize(16);
+    doc.text("LEADS REPORT", 10, y);
+    y += 10;
+
+    leads.forEach((l, i) => {
+      doc.setFontSize(10);
+      doc.text(`${i + 1}. ${l.name}`, 10, y);
+      y += 6;
+      doc.text(`Phone: ${l.phone}`, 10, y);
+      y += 6;
+      doc.text(`Address: ${l.address}`, 10, y);
+      y += 10;
+    });
+
+    doc.save("leads.pdf");
+  };
+
+  return (
+    <div style={styles.page}>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <h1 style={styles.title}>LeadFlow CRM</h1>
+        <p style={styles.subtitle}>Modern Lead Generation Dashboard</p>
+      </div>
+
+      {/* SEARCH */}
+      <div style={styles.card}>
+        <h3>Search Leads</h3>
+
+        <input
+          style={styles.input}
+          placeholder="City"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        />
+
+        <input
+          style={styles.input}
+          placeholder="Speciality"
+          value={speciality}
+          onChange={(e) => setSpeciality(e.target.value)}
+        />
+
+        <button style={styles.btnBlue} onClick={openGoogleMaps}>
+          Google Maps Search
+        </button>
+      </div>
+
+      {/* EXTRACT */}
+      <div style={styles.card}>
+        <h3>Extract Lead Data</h3>
+
+        <textarea
+          style={styles.textarea}
+          placeholder="Paste Google Maps data here..."
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+        />
+
+        <div style={styles.row}>
+          <button style={styles.btnBlue} onClick={extractLead}>
+            Extract
+          </button>
+
+          <button style={styles.btnGreen} onClick={saveLead}>
+            Save Lead
+          </button>
+        </div>
+
+        {lead && (
+          <div style={styles.preview}>
+            <b>{lead.name}</b>
+            <p>{lead.phone}</p>
+            <p>{lead.address}</p>
+          </div>
+        )}
+      </div>
+
+      {/* LEADS */}
+      <div style={styles.card}>
+        <h3>Saved Leads</h3>
+
+        <div style={styles.row}>
+          <button style={styles.btnPurple} onClick={exportCSV}>
+            Export CSV
+          </button>
+
+          <button style={styles.btnDark} onClick={exportPDF}>
+            Export PDF
+          </button>
+        </div>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>WhatsApp</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {leads.map((l, i) => (
+              <tr key={i}>
+                <td>{l.name}</td>
+                <td>{l.phone}</td>
+                <td>{l.address}</td>
+                <td>
+                  <a href={whatsapp(l.phone)} target="_blank">
+                    <button style={styles.btnGreen}>Chat</button>
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ================= MODERN SAAS STYLES =================
+const styles = {
+  page: {
+    fontFamily: "Arial",
+    background: "#f5f8ff",
+    minHeight: "100vh",
+    padding: "20px",
+    color: "#1f2a44",
+  },
+
+  header: {
+    textAlign: "center",
+    marginBottom: "20px",
+  },
+
+  title: {
+    color: "#2f4b7c",
+    fontSize: "28px",
+    fontWeight: "700",
+  },
+
+  subtitle: {
+    color: "#7a8aa8",
+    fontSize: "13px",
+  },
+
+  card: {
+    background: "white",
+    padding: "20px",
+    borderRadius: "14px",
+    marginBottom: "15px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+  },
+
+  input: {
+    width: "100%",
+    padding: "12px",
+    marginTop: "8px",
+    borderRadius: "10px",
+    border: "1px solid #dbe3f3",
+    color: "#000",
+  },
+
+  textarea: {
+    width: "100%",
+    height: "120px",
+    padding: "12px",
+    marginTop: "8px",
+    borderRadius: "10px",
+    border: "1px solid #dbe3f3",
+    color: "#000",
+  },
+
+  row: {
+    display: "flex",
+    gap: "10px",
+    marginTop: "10px",
+    flexWrap: "wrap",
+  },
+
+  btnBase: {
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  btnBlue: {
+    background: "#5b7cfa",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  btnGreen: {
+    background: "#34d399",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  btnPurple: {
+    background: "#8b9bff",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  btnDark: {
+    background: "#1f2a44",
+    color: "white",
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
+
+  table: {
+    width: "100%",
+    marginTop: "10px",
+    fontSize: "14px",
+  },
+
+  preview: {
+    marginTop: "10px",
+    padding: "10px",
+    background: "#f0f4ff",
+    borderRadius: "10px",
+  },
+};

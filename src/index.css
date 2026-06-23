@@ -1,0 +1,40 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #111;
+}
+
+/* NAVBAR FIX (THIS IS YOUR MAIN PROBLEM) */
+nav {
+  background: #ffffff !important;
+  color: #111 !important;
+  padding: 12px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+nav a {
+  color: #111 !important;
+  font-weight: 600;
+  margin-right: 15px;
+}
+
+nav a:hover {
+  color: #4f46e5 !important;
+}
+
+/* INPUT FIX */
+input, textarea {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+/* BUTTON BASE */
+button {
+  cursor: pointer;
+}
