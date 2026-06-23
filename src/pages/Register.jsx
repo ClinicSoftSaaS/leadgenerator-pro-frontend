@@ -13,17 +13,24 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
 
-    const data = await registerUser({
-      username: username.trim(),
-      password,
-    });
+    try {
+      const res = await registerUser({
+        username: username.trim(),
+        password,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (data.message || data.status === "created") {
-      navigate("/");
-    } else {
-      alert(data.detail || "Registration failed");
+      // ✅ FIX: proper response check
+      if (res.ok || res.message || res.status === "created") {
+        alert("Account created successfully");
+        navigate("/");
+      } else {
+        alert(res.detail || "Registration failed");
+      }
+    } catch (err) {
+      setLoading(false);
+      alert("Server error. Please try again.");
     }
   };
 

@@ -13,18 +13,24 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const data = await loginUser({
-      username: username.trim(),
-      password,
-    });
+    try {
+      const res = await loginUser({
+        username: username.trim(),
+        password,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      navigate("/dashboard");
-    } else {
-      alert(data.detail || "Login failed");
+      // ✅ FIX: proper success check
+      if (res?.access_token) {
+        localStorage.setItem("token", res.access_token);
+        navigate("/dashboard");
+      } else {
+        alert(res?.detail || "Login failed");
+      }
+    } catch (err) {
+      setLoading(false);
+      alert("Server error. Please try again.");
     }
   };
 
