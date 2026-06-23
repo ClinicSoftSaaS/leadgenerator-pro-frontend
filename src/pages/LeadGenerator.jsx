@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function LeadGenerator() {
-  const API = "http://127.0.0.1:8000";
+  const API = import.meta.env.VITE_API_URL;
 
   const [city, setCity] = useState("");
   const [speciality, setSpeciality] = useState("");
